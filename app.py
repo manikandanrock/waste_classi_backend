@@ -20,26 +20,25 @@ MODEL_URL = "https://drive.usercontent.google.com/download?id=1FMvhvLE2ikEmeIgNF
 MODEL_PATH = "./model.tflite"  # Path for the .tflite model
 CLASS_NAMES = ['Organic', 'Recycleable']  # Define class names
 
+import gdown
+
+MODEL_URL = "https://drive.google.com/file/d/1FMvhvLE2ikEmeIgNFMM8jlnpI_iRSTIn/view?usp=drive_link"  # Your Google Drive view link
+MODEL_PATH = "./model.tflite"
+
 def download_model():
     if not os.path.exists(MODEL_PATH):
-        logging.info("Downloading model...")
+        logging.info(f"Model file '{MODEL_PATH}' not found. Downloading...")
         try:
-            response = requests.get(MODEL_URL, stream=True)
-            response.raise_for_status()
-
-            with open(MODEL_PATH, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-
+            gdown.download(MODEL_URL, MODEL_PATH, quiet=False)  # Download the file
             file_size = os.path.getsize(MODEL_PATH)
             logging.info(f"Model downloaded. Size: {file_size} bytes")
-        except requests.exceptions.RequestException as e:
-            logging.error(f"Download error: {e}")
+        except Exception as e:
+            logging.error(f"Error downloading model: {e}")
             raise
-
     else:
-        file_size = os.path.getsize(MODEL_PATH)
-        logging.info(f"Model file already exists. Size: {file_size} bytes")
+        logging.info(f"Model file '{MODEL_PATH}' already exists. Skipping download.")
+
+# ... rest of your code ...
 
 download_model()
 
