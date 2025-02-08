@@ -15,20 +15,30 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1FrRjlIOFDK7qWvgOP6ACHuWHfHhYF9sZ"
-MODEL_PATH = "./model/cnnmodel.h5"
+MODEL_PATH = "/model/cnnmodel.h5"
 
 # Function to download the model if not exists
+        
 def download_model():
     if not os.path.exists(MODEL_PATH):
         print("Downloading model from Google Drive...")
-        os.makedirs("./model", exist_ok=True)
+        os.makedirs("/model", exist_ok=True)
         response = requests.get(MODEL_URL, stream=True)
         with open(MODEL_PATH, "wb") as file:
             for chunk in response.iter_content(chunk_size=1024):
                 if chunk:
                     file.write(chunk)
         print("Model downloaded successfully.")
-
+    
+    # Check the file size after download
+    if os.path.exists(MODEL_PATH):
+        model_size = os.path.getsize(MODEL_PATH)
+        if model_size < 1000:  # Model should be larger than a few bytes
+            print("Model file might be corrupted. Please check the download.")
+        else:
+            print(f"Model file size: {model_size} bytes")
+    else:
+        print("Model file not found after download.")
 # Download the model before loading
 download_model()
 
