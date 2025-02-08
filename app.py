@@ -10,35 +10,26 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.keras.preprocessing import image
 import base64
+import zipfile
 
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Authenticate Kaggle API
-def authenticate_kaggle():
-    api = KaggleApi()
-    api.authenticate()
+# Authenticate
+api = KaggleApi()
+api.authenticate()
 
-# Function to download the model from Kaggle
-def download_model_from_kaggle():
-    authenticate_kaggle()
-    model_path = './cnnmodel.h5'  # Local path to save the model
-
-    # Download the model from Kaggle
-    api = KaggleApi()
-    api.dataset_download_file('manikandanvistas/cnnmodel', file_name='cnnmodel.h5', path='./')
-
-    print(f"Model downloaded to {model_path}")
-    return model_path
-
-# Download the model (Only do this once, and ensure it's downloaded before using it)
-if not os.path.exists('./cnnmodel.h5'):
-    download_model_from_kaggle()
+# Download model from Kaggle
+api.dataset_download_file('manikandanvistas/cnnmodel', file_name='cnnmodel.h5', path='./model')
 
 # Load your trained model
-model = tf.keras.models.load_model('./cnnmodel.h5')
-
+try:
+    model = tf.keras.models.load_model('./model/cnnmodel.h5')
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    model = None
 
 # Define image preprocessing function
 def preprocess_image(file):
