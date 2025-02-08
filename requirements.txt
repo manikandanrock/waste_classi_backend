@@ -1,6 +1,6 @@
-Flask==2.1.2
-Flask-Cors==3.1.1
-Pillow==9.0.1
-kaggle==1.5.12
-tensorflow==2.11.0
-numpy==1.23.5
+Flask
+Flask-Cors
+Pillow
+kaggle
+tensorflow
+numpy
