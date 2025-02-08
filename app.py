@@ -6,113 +6,103 @@ from flask import Flask, request, jsonify
 import requests
 import tensorflow as tf
 import numpy as np
-from tensorflow.keras.preprocessing import image
 import base64
-import zipfile
+import logging  # Import logging
 
-# Initialize Flask app
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-MODEL_URL = "https://drive.google.com/uc?export=download&id=1FrRjlIOFDK7qWvgOP6ACHuWHfHhYF9sZ"
+# ***REPLACE WITH THE ACTUAL, WORKING DOWNLOAD URL***
+MODEL_URL = "https://drive.usercontent.google.com/download?id=1FrRjlIOFDK7qWvgOP6ACHuWHfHhYF9sZ&export=download&authuser=0&confirm=t&uuid=1c32b9cf-b137-4bb6-a0be-b2a1f18091d0&at=AIrpjvNHE6QhgliQKSpwFRtKr2r4%3A1739025597271"
 MODEL_PATH = "./cnnmodel.h5"
+CLASS_NAMES = ['Organic', 'Recycleable']  # Define class names
 
-# Function to download the model if not exists
-        
 def download_model():
     if not os.path.exists(MODEL_PATH):
-        print("Downloading model from Google Drive...")
-        response = requests.get(MODEL_URL, stream=True)
-        with open(MODEL_PATH, "wb") as file:
-            for chunk in response.iter_content(chunk_size=1024):
-                if chunk:
-                    file.write(chunk)
-        print("Model downloaded successfully.")
-    
-    # Check the file size after download
-    if os.path.exists(MODEL_PATH):
-        model_size = os.path.getsize(MODEL_PATH)
-        if model_size < 1000:  # Model should be larger than a few bytes
-            print("Model file might be corrupted. Please check the download.")
-        else:
-            print(f"Model file size: {model_size} bytes")
-    else:
-        print("Model file not found after download.")
-# Download the model before loading
-download_model()
+        logging.info("Downloading model...")  # Use logging
+        try:
+            response = requests.get(MODEL_URL, stream=True)
+            response.raise_for_status()  # Check for HTTP errors
 
-# Load your trained model
+            with open(MODEL_PATH, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):  # Larger chunk size
+                    f.write(chunk)
+
+            file_size = os.path.getsize(MODEL_PATH)
+            logging.info(f"Model downloaded. Size: {file_size} bytes")
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Download error: {e}")
+            raise  # Re-raise to stop app initialization
+    else:
+        file_size = os.path.getsize(MODEL_PATH)
+        logging.info(f"Model file already exists. Size: {file_size} bytes")
+
+
+download_model() # Download model before loading it.
+
 try:
     model = tf.keras.models.load_model(MODEL_PATH)
-    print("Model loaded successfully.")
+    logging.info("Model loaded successfully.")
 except Exception as e:
-    print(f"Error loading model: {e}")
-    model = None
+    logging.error(f"Error loading model: {e}")
+    raise  # Stop app initialization if model loading fails
 
-# Define image preprocessing function
+
 def preprocess_image(file):
     try:
-        # Convert FileStorage object to a BytesIO object
-        img_bytes = io.BytesIO(file.read())  # Read the file and convert it to BytesIO
-        img = Image.open(img_bytes)  # Open the image using PIL
-        img = img.convert('RGB')  # Ensure image is in RGB mode
-        img = img.resize((224, 224))  # Resize image to the input size of the model
-        img_array = np.array(img)
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-        img_array = img_array.astype('float32')  # Ensure correct type for processing
-        img_array /= 255.0   # Normalize the image to range [0, 1]
-        return img_array
+        img_bytes = io.BytesIO(file.read())
+        img = Image.open(img_bytes).convert('RGB').resize((224, 224))
+        img_array = np.array(img) / 255.0
+        return np.expand_dims(img_array, axis=0).astype('float32')
     except Exception as e:
-        print(f"Error in preprocessing image: {e}")
-        raise e
+        logging.error(f"Error in preprocessing: {e}")
+        raise  # Re-raise the exception
+
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if model is None:
-        return jsonify({'error': 'Model not found, please check the model path.'})
+        return jsonify({'error': 'Model not loaded'}), 500  # HTTP 500
 
     try:
-        # Check if the file is provided in the request
         if 'file' not in request.files:
-            return jsonify({'error': 'No file part in the request.'})
+            return jsonify({'error': 'No file part'}), 400  # HTTP 400
 
         file = request.files['file']
-
-        # If no file is selected by the user
         if file.filename == '':
-            return jsonify({'error': 'No selected file.'})
+            return jsonify({'error': 'No selected file'}), 400
 
-        # Validate file extension
         if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-            return jsonify({'error': 'Invalid file type. Please upload an image file (jpg, jpeg, png).'})
-        
-        # Process the image
-        print("Processing image...")
-        img_array = preprocess_image(file)  # Use the updated preprocessing function
+            return jsonify({'error': 'Invalid file type'}), 400
 
-        # Predict the class
-        print(f"Image array shape: {img_array.shape}")
+        logging.info("Processing image...")
+        img_array = preprocess_image(file)
+
+        logging.info(f"Image array shape: {img_array.shape}")
         prediction = model.predict(img_array)
 
-        # Assuming binary classification: prediction[0][0] > 0.5 means 'Organic', else 'Recyclable'
-        predicted_class = 'Organic' if prediction[0][0] > 0.5 else 'Recyclable'
-        predicted_score = prediction[0][0] if predicted_class == 'Organic' else 1 - prediction[0][0]
+        # ***HANDLE MULTI-CLASS PREDICTIONS CORRECTLY***
+        predicted_class_index = np.argmax(prediction)
+        predicted_class = CLASS_NAMES[predicted_class_index]  # Use class names
+        predicted_score = prediction[0][predicted_class_index]
 
-        # Convert image back to uint8 for saving and base64 conversion
-        img = Image.fromarray((img_array[0] * 255).astype(np.uint8))  # Convert back to uint8 for displaying
+        img = Image.fromarray((img_array[0] * 255).astype(np.uint8))
         buffered = io.BytesIO()
-        img.save(buffered, format="JPEG")
+        img.save(buffered, format="JPEG")  # Or PNG
         img_str = base64.b64encode(buffered.getvalue()).decode('utf-8')
 
         return jsonify({
             'prediction': predicted_class,
-            'score': float(predicted_score),  # Convert float32 to Python float
+            'score': float(predicted_score),
             'image': img_str
-        })
+        }), 200  # HTTP 200
 
     except Exception as e:
-        print(f"Error in prediction: {e}")
-        return jsonify({'error': str(e)})
+        logging.exception(f"Error in prediction: {e}")  # Use logging.exception
+        return jsonify({'error': str(e)}), 500  # HTTP 500
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)
