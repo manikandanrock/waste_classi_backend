@@ -3,11 +3,11 @@ import io
 from PIL import Image
 from flask_cors import CORS
 from flask import Flask, request, jsonify
-import requests
 import tensorflow as tf
 import numpy as np
 import base64
 import logging
+import gdown  # Import gdown at the top
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -15,21 +15,16 @@ logging.basicConfig(level=logging.INFO)
 app = Flask(__name__)
 CORS(app)
 
-# ***REPLACE WITH THE ACTUAL, WORKING DOWNLOAD URL***
-MODEL_URL = "https://drive.usercontent.google.com/download?id=1FMvhvLE2ikEmeIgNFMM8jlnpI_iRSTIn"  # URL for your .tflite model
-MODEL_PATH = "./model.tflite"  # Path for the .tflite model
-CLASS_NAMES = ['Organic', 'Recycleable']  # Define class names
-
-import gdown
-
-MODEL_URL = "https://drive.google.com/file/d/1FMvhvLE2ikEmeIgNFMM8jlnpI_iRSTIn/view?usp=drive_link"  # Your Google Drive view link
+MODEL_ID = "1FMvhvLE2ikEmeIgNFMM8jlnpI_iRSTIn"  # The ID from the Google Drive URL
 MODEL_PATH = "./model.tflite"
+CLASS_NAMES = ['Organic', 'Recycleable']
 
 def download_model():
     if not os.path.exists(MODEL_PATH):
         logging.info(f"Model file '{MODEL_PATH}' not found. Downloading...")
         try:
-            gdown.download(MODEL_URL, MODEL_PATH, quiet=False)  # Download the file
+            # More robust download using gdown with file ID
+            gdown.download(f"https://drive.google.com/uc?id={MODEL_ID}", MODEL_PATH, quiet=False)
             file_size = os.path.getsize(MODEL_PATH)
             logging.info(f"Model downloaded. Size: {file_size} bytes")
         except Exception as e:
@@ -38,19 +33,14 @@ def download_model():
     else:
         logging.info(f"Model file '{MODEL_PATH}' already exists. Skipping download.")
 
-# ... rest of your code ...
-
 download_model()
 
 try:
-    # Load the TFLite model
     interpreter = tf.lite.Interpreter(model_path=MODEL_PATH)
     interpreter.allocate_tensors()
-
     input_details = interpreter.get_input_details()
     output_details = interpreter.get_output_details()
     logging.info("TFLite model loaded successfully.")
-
 except Exception as e:
     logging.error(f"Error loading TFLite model: {e}")
     raise
