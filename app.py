@@ -104,6 +104,4 @@ def predict():
         gc.collect()  # Force garbage collection after each request
 
 if __name__ == "__main__":
-    # Set host to 0.0.0.0 for cloud services and use the environment's PORT variable
-    port = int(os.environ.get("PORT", 10000))
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run()
