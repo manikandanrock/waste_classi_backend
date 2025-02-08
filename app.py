@@ -5,7 +5,7 @@ from flask_cors import CORS
 from flask import Flask, request, jsonify
 import kaggle
 from kaggle.api.kaggle_api_extended import KaggleApi
-
+import requests
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.preprocessing import image
@@ -16,16 +16,27 @@ import zipfile
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Authenticate
-api = KaggleApi()
-api.authenticate()
+MODEL_URL = "https://drive.google.com/uc?export=download&id=1FrRjlIOFDK7qWvgOP6ACHuWHfHhYF9sZ"
+MODEL_PATH = "./model/cnnmodel.h5"
 
-# Download model from Kaggle
-api.dataset_download_file('manikandanvistas/cnnmodel', file_name='cnnmodel.h5', path='./model')
+# Function to download the model if not exists
+def download_model():
+    if not os.path.exists(MODEL_PATH):
+        print("Downloading model from Google Drive...")
+        os.makedirs("./model", exist_ok=True)
+        response = requests.get(MODEL_URL, stream=True)
+        with open(MODEL_PATH, "wb") as file:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    file.write(chunk)
+        print("Model downloaded successfully.")
+
+# Download the model before loading
+download_model()
 
 # Load your trained model
 try:
-    model = tf.keras.models.load_model('./model/cnnmodel.h5')
+    model = tf.keras.models.load_model(MODEL_PATH)
     print("Model loaded successfully.")
 except Exception as e:
     print(f"Error loading model: {e}")
