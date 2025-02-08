@@ -104,4 +104,4 @@ def predict():
         gc.collect()  # Force garbage collection after each request
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, host="0.0.0.0", port=10000)
