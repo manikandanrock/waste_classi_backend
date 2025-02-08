@@ -15,14 +15,13 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 MODEL_URL = "https://drive.google.com/uc?export=download&id=1FrRjlIOFDK7qWvgOP6ACHuWHfHhYF9sZ"
-MODEL_PATH = "/model/cnnmodel.h5"
+MODEL_PATH = "./cnnmodel.h5"
 
 # Function to download the model if not exists
         
 def download_model():
     if not os.path.exists(MODEL_PATH):
         print("Downloading model from Google Drive...")
-        os.makedirs("/model", exist_ok=True)
         response = requests.get(MODEL_URL, stream=True)
         with open(MODEL_PATH, "wb") as file:
             for chunk in response.iter_content(chunk_size=1024):
