@@ -3,8 +3,6 @@ import io
 from PIL import Image
 from flask_cors import CORS
 from flask import Flask, request, jsonify
-import kaggle
-from kaggle.api.kaggle_api_extended import KaggleApi
 import requests
 import tensorflow as tf
 import numpy as np
