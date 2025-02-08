@@ -73,6 +73,10 @@ def predict():
         if file.filename == '':
             return jsonify({'error': 'No selected file.'})
 
+        # Validate file extension
+        if not file.filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            return jsonify({'error': 'Invalid file type. Please upload an image file (jpg, jpeg, png).'})
+        
         # Process the image
         print("Processing image...")
         img_array = preprocess_image(file)  # Use the updated preprocessing function
