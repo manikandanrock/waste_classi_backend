@@ -23,21 +23,21 @@ def authenticate_kaggle():
 # Function to download the model from Kaggle
 def download_model_from_kaggle():
     authenticate_kaggle()
-    model_path = './model/cnnmodel.h5'  # Local path to save the model
+    model_path = './cnnmodel.h5'  # Local path to save the model
 
     # Download the model from Kaggle
     api = KaggleApi()
-    api.dataset_download_file('manikandanvistas/cnnmodel', file_name='cnnmodel.h5', path='./model/')
+    api.dataset_download_file('manikandanvistas/cnnmodel', file_name='cnnmodel.h5', path='./')
 
     print(f"Model downloaded to {model_path}")
     return model_path
 
 # Download the model (Only do this once, and ensure it's downloaded before using it)
-if not os.path.exists('./model/cnnmodel.h5'):
+if not os.path.exists('./cnnmodel.h5'):
     download_model_from_kaggle()
 
 # Load your trained model
-model = tf.keras.models.load_model('./model/cnnmodel.h5')
+model = tf.keras.models.load_model('./cnnmodel.h5')
 
 
 # Define image preprocessing function
